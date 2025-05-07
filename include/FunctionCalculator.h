@@ -6,8 +6,8 @@
 #include <iosfwd>
 #include <optional>
 #include <iostream>
-
-
+#include <sstream>
+#include <string>
 class Operation;
 
 
@@ -80,10 +80,10 @@ private:
     bool m_running = true;
     std::istream& m_istr;
     std::ostream& m_ostr;
-
+    std::istringstream m_iss;
     std::optional<int> readOperationIndex() const;
     Action readAction() const;
-
+    
     void runAction(Action action);
 
     ActionMap createActions() const;

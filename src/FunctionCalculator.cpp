@@ -6,10 +6,13 @@
 #include "Identity.h"
 #include "Transpose.h"
 #include "Scalar.h"
-
+#include "InputException.h"
 #include <iostream>
 #include <algorithm>
 
+
+
+const auto MAX_MAT_SIZE = 5;
 
 FunctionCalculator::FunctionCalculator(std::istream& istr, std::ostream& ostr)
     : m_actions(createActions()), m_operations(createOperations()), m_istr(istr), m_ostr(ostr) {}
@@ -22,8 +25,14 @@ void FunctionCalculator::run()
         m_ostr << '\n';
         printOperations();
         m_ostr << "Enter command ('help' for the list of available commands): ";
-        const auto action = readAction();
-        runAction(action);
+        try {
+            const auto action = readAction();
+            runAction(action);
+        }
+        catch (const InputException& e)
+        {
+            m_ostr << e.what();
+        }
     } while (m_running);
 }
 
@@ -36,6 +45,24 @@ void FunctionCalculator::eval()
 		int inputCount = operation->inputCount();
         int size = 0;
         m_istr >> size;
+        
+        // Throws an exception if the entered matrix size exceeds the allowed maximum (5)
+        if (size > MAX_MAT_SIZE)
+        {
+            throw InputException("The entered matrix size is larger than MAX_MAT_SIZE (5)");
+        }
+
+        
+        // Throws an exception if too many arguments were provided for the command
+      /*  auto str = std::string();
+        m_istr >> str;
+        if ( str != "")
+        {
+            throw InputException("Too many arguments for this command");
+        }*/
+
+
+
 		auto matrixVec = std::vector<Operation::T>();
         if (inputCount > 1)
             m_ostr << "\nPlease enter " << inputCount << " matrices:\n";
@@ -99,11 +126,21 @@ std::optional<int> FunctionCalculator::readOperationIndex() const
 {
     int i = 0;
     m_istr >> i;
-    if (i >= static_cast<int>(m_operations.size()))
+
+    // if the read operation failed (e.g. characters were entered instead of a number)
+    if (m_istr.fail())
     {
-        m_ostr << "Operation #" << i << " doesn't exist\n";
-        return {};
+        m_istr.clear(); 
+        m_istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        throw InputException("must enter numbers, not characters.");
     }
+
+    // if i out of range the vector operation : -> throw
+    if (i >= static_cast<int>(m_operations.size()) || i<0)
+    {
+        throw InputException("out of range the vector operation");
+    }
+
     return i;
 }
 
@@ -114,12 +151,15 @@ FunctionCalculator::Action FunctionCalculator::readAction() const
     m_istr >> action;
 
     const auto i = std::ranges::find(m_actions, action, &ActionDetails::command);
-    if (i != m_actions.end())
-    {
-        return i->action;
-    }
 
-    return Action::Invalid;
+   // If a number was entered outside the range of the operation vector
+    if (i == m_actions.end())
+	{
+		throw InputException("number outside the range of the operation vector\n");
+	}
+    
+   
+    return i->action;
 }
 
 
