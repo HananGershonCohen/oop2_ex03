@@ -7,6 +7,8 @@
 #include "Transpose.h"
 #include "Scalar.h"
 #include "InputException.h"
+#include "ReadFile.h"
+
 #include <iostream>
 #include <algorithm>
 
@@ -108,6 +110,18 @@ void FunctionCalculator::exit()
     m_running = false;
 }
 
+void FunctionCalculator::read()
+{
+    std::string str = "new1.txt";
+    ReadFile file1(str);
+
+    while (file1.getline(str))
+    {
+		// read the line from the file and send the string to readAction function.
+		// readAction();
+    }
+}
+
 
 void FunctionCalculator::printOperations() const
 {
@@ -147,6 +161,16 @@ std::optional<int> FunctionCalculator::readOperationIndex() const
 
 FunctionCalculator::Action FunctionCalculator::readAction() const
 {
+
+    /*The code should be modified as follows:
+The user will input data into m_istr.
+This input will be inserted into std::istringstream m_iss.
+The readAction function should then read the command from the istringstream.
+
+We will also support reading from a file:
+The string received from the function ReadFile::getline(std::string& outLine) will be inserted into the istringstream, and from there, the code will call the readAction function.
+
+-- The readAction function will likely no longer be const.*/
     auto action = std::string();
     m_istr >> action;
 
@@ -185,6 +209,7 @@ void FunctionCalculator::runAction(Action action)
         case Action::Iden:     unaryFunc<Identity>();       break;
         case Action::Tran:     unaryFunc<Transpose>();      break;
         case Action::Scal:     unaryWithIntFunc<Scalar>();  break;
+        case Action::Read:     read();                      break;
     }
 }
 

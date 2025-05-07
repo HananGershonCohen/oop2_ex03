@@ -22,6 +22,7 @@ private:
     void del();
     void help();
     void exit();
+    void read();
 
     template <typename FuncType>
     void binaryFunc()
@@ -62,6 +63,7 @@ private:
         Del,
         Help,
         Exit,
+        Read
     };
 
     // Command line
