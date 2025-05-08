@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 
+// c-tor initializes defualt values of the matrix . clear this.
 
 template <typename T>
 class SquareMatrix
@@ -81,7 +82,8 @@ inline std::istream& operator>>(std::istream& istr, SquareMatrix<int>& matrix)
 // the relevant function
 template <typename T>
 SquareMatrix<T>::SquareMatrix(int size, const T& value)
-	: m_size(size), m_matrix(size, std::vector<T>(size, value))
+	: m_size(size), m_matrix(size, std::vector<T>(size, value)) // to add function check -1024 +1000
+	// MAX_SIZE_MATRIX > 5 , before using the vector
 {
 	for (int i = 0; i < size * size; ++i)
 	{

@@ -22,17 +22,25 @@ FunctionCalculator::FunctionCalculator(std::istream& istr, std::ostream& ostr)
 
 void FunctionCalculator::run()
 {
+
+	// ask the user number of operations to be performed
+
     do
     {
         m_ostr << '\n';
         printOperations();
         m_ostr << "Enter command ('help' for the list of available commands): ";
+        readLine();
         try {
             const auto action = readAction();
             runAction(action);
         }
         catch (const InputException& e)
         {
+            // if mode file = true 
+			// ask user if to continue next row or not
+			// if yes -> continue and ignore this line.
+			// else mode file = false . close file .
             m_ostr << e.what();
         }
     } while (m_running);
@@ -46,8 +54,9 @@ void FunctionCalculator::eval()
         const auto& operation = m_operations[*index];
 		int inputCount = operation->inputCount();
         int size = 0;
-        m_istr >> size;
-        
+        //m_istr >> size;
+        m_iss >> size;
+
         // Throws an exception if the entered matrix size exceeds the allowed maximum (5)
         if (size > MAX_MAT_SIZE)
         {
@@ -63,6 +72,8 @@ void FunctionCalculator::eval()
             throw InputException("Too many arguments for this command");
         }*/
 
+        if (hasNonWhitespace())
+            throw InputException("Too many arguments for this command");
 
 
 		auto matrixVec = std::vector<Operation::T>();
@@ -86,6 +97,7 @@ void FunctionCalculator::eval()
 
 void FunctionCalculator::del()
 {
+	// update the number of operations are leagelly -- ??? 
     if (auto i = readOperationIndex(); i)
     {
         m_operations.erase(m_operations.begin() + *i);
@@ -112,19 +124,22 @@ void FunctionCalculator::exit()
 
 void FunctionCalculator::read()
 {
-    std::string str = "new1.txt";
-    ReadFile file1(str);
+    std::string file_path = "new1.txt";
+    ReadFile file1(file_path);
 
-    while (file1.getline(str))
+    std::string line;
+    while (file1.getline(line))
     {
 		// read the line from the file and send the string to readAction function.
 		// readAction();
+
+
     }
 }
 
-
 void FunctionCalculator::printOperations() const
 {
+	// print number of operations are leagelly
     m_ostr << "List of available matrix operations:\n";
     for (decltype(m_operations.size()) i = 0; i < m_operations.size(); ++i)
     {
@@ -136,16 +151,17 @@ void FunctionCalculator::printOperations() const
 }
 
 
-std::optional<int> FunctionCalculator::readOperationIndex() const
+std::optional<int> FunctionCalculator::readOperationIndex() 
 {
     int i = 0;
-    m_istr >> i;
+    //m_istr >> i;
+    m_iss >> i;
 
     // if the read operation failed (e.g. characters were entered instead of a number)
-    if (m_istr.fail())
+    if (m_iss.fail())
     {
-        m_istr.clear(); 
-        m_istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        m_iss.clear();
+        m_iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         throw InputException("must enter numbers, not characters.");
     }
 
@@ -159,7 +175,7 @@ std::optional<int> FunctionCalculator::readOperationIndex() const
 }
 
 
-FunctionCalculator::Action FunctionCalculator::readAction() const
+FunctionCalculator::Action FunctionCalculator::readAction() 
 {
 
     /*The code should be modified as follows:
@@ -171,8 +187,12 @@ We will also support reading from a file:
 The string received from the function ReadFile::getline(std::string& outLine) will be inserted into the istringstream, and from there, the code will call the readAction function.
 
 -- The readAction function will likely no longer be const.*/
+    //auto line = std::string();
+    //std::getline(m_istr, line);
+    
     auto action = std::string();
-    m_istr >> action;
+    //m_istr >> action;
+    m_iss >> action;
 
     const auto i = std::ranges::find(m_actions, action, &ActionDetails::command);
 
@@ -210,6 +230,7 @@ void FunctionCalculator::runAction(Action action)
         case Action::Tran:     unaryFunc<Transpose>();      break;
         case Action::Scal:     unaryWithIntFunc<Scalar>();  break;
         case Action::Read:     read();                      break;
+            // reaize
     }
 }
 
@@ -274,4 +295,23 @@ FunctionCalculator::OperationList FunctionCalculator::createOperations() const
         std::make_shared<Identity>(),
         std::make_shared<Transpose>(),
     };
+}
+
+void FunctionCalculator::readLine()
+{
+	//if mode read from file -> getline(file , line) // if EOF change mode to console // close file
+	//else getline(std::cin, line);
+    std::getline(m_istr, m_line);
+    m_iss.str(m_line);
+}
+
+bool FunctionCalculator::hasNonWhitespace()
+{
+    char ch;
+    while (m_iss >> std::noskipws >> ch) {
+        if (!std::isspace(static_cast<unsigned char>(ch))) {
+            return true;
+        }
+    }
+    return false;
 }

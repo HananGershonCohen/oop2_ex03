@@ -8,6 +8,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+
+
 class Operation;
 
 
@@ -24,9 +26,13 @@ private:
     void exit();
     void read();
 
+
+	// function check if the number of vecoperations is correct #1
+
     template <typename FuncType>
     void binaryFunc()
     {
+		// call to #1
         if (auto f0 = readOperationIndex(), f1 = readOperationIndex(); f0 && f1)
         {
             m_operations.push_back(std::make_shared<FuncType>(m_operations[*f0], m_operations[*f1]));
@@ -36,12 +42,14 @@ private:
     template <typename FuncType>
     void unaryFunc()
     {
+		//callto #1
     	m_operations.push_back(std::make_shared<FuncType>());
 	}
 
     template <typename FuncType>
     void unaryWithIntFunc()
     {
+		// call to #1
         int i = 0;
         m_istr >> i;
         m_operations.push_back(std::make_shared<FuncType>(i));
@@ -82,12 +90,20 @@ private:
     bool m_running = true;
     std::istream& m_istr;
     std::ostream& m_ostr;
+
     std::istringstream m_iss;
-    std::optional<int> readOperationIndex() const;
-    Action readAction() const;
+    std::string m_line;
+    
+
+    std::optional<int> readOperationIndex() ;
+    Action readAction();
     
     void runAction(Action action);
 
     ActionMap createActions() const;
     OperationList createOperations() const ;
+
+    // 
+    void readLine();
+    bool hasNonWhitespace();
 };
