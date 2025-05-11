@@ -7,9 +7,16 @@
 
 int main()
 {
+  
     
-
-    FunctionCalculator(std::cin, std::cout).run();
+	try
+	{
+		FunctionCalculator(std::cout).run();
+	}
+	catch (...)
+	{
+		std::cout << "\n ERROR";
+	}
    
 
 }

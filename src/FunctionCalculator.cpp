@@ -7,7 +7,8 @@
 #include "Transpose.h"
 #include "Scalar.h"
 #include "InputException.h"
-#include "ReadFile.h"
+#include "FileException.h"
+//#include "ReadFile.h"
 
 #include <iostream>
 #include <algorithm>
@@ -16,46 +17,74 @@
 
 const auto MAX_MAT_SIZE = 5;
 
-FunctionCalculator::FunctionCalculator(std::istream& istr, std::ostream& ostr)
-    : m_actions(createActions()), m_operations(createOperations()), m_istr(istr), m_ostr(ostr) {}
+FunctionCalculator::FunctionCalculator( std::ostream& ostr)
+    : m_actions(createActions()), m_operations(createOperations()), m_ostr(ostr) {}
 
 
 void FunctionCalculator::run()
 {
+	updateMaxFunc();
+    run(std::cin);
+}
 
-	// ask the user number of operations to be performed
-
-    do
+void FunctionCalculator::run(std::istream& istr)
+{
+    // Read as much as possible either from the file or from standard input.
+    auto line = std::string();
+    auto iss = std::istringstream();
+    iss.exceptions(std::ios::failbit | std::ios::badbit);
+    while (m_running && std::getline(istr, line))
     {
-        m_ostr << '\n';
         printOperations();
-        m_ostr << "Enter command ('help' for the list of available commands): ";
-        readLine();
+        std::getline(istr, line);
+        iss.clear();
+        iss.str(line);
+
         try {
-            const auto action = readAction();
-            runAction(action);
+            const auto action = readAction(iss);
+            runAction(action, iss , istr);
         }
         catch (const InputException& e)
         {
-            // if mode file = true 
-			// ask user if to continue next row or not
-			// if yes -> continue and ignore this line.
-			// else mode file = false . close file .
-            m_ostr << e.what();
+            //if (m_fileMode)
+            //{
+            //    m_ostr << "\n this line is invalid: " << m_line << "\n";
+            //    m_ostr << "Error: " << e.what() << "\n";
+            //    m_ostr << "Do you want to continue? (y/n): ";
+            //    char choice;
+            //    std::cin >> choice;
+            //    if (choice == 'n' || choice == 'N')
+            //    {
+            //        //	file.close();
+            //        m_fileMode = false;
+            //    }
+            //}
+            //else
+            //{
+            //    m_ostr << "Error: " << e.what() << "\n";
+            //}
+             m_ostr << e.what();
         }
-    } while (m_running);
+        catch (const FileException& e)
+        {
+           m_ostr << e.what();
+        }
+        catch (const std::runtime_error& e)
+        {
+            m_ostr << "Error: " << e.what() << '\n';
+        }
+    } 
 }
 
 
-void FunctionCalculator::eval()
+void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
 {
-    if (auto index = readOperationIndex(); index)
+    if (auto index = readOperationIndex(iss); index)
     {
         const auto& operation = m_operations[*index];
 		int inputCount = operation->inputCount();
         int size = 0;
-        //m_istr >> size;
-        m_iss >> size;
+        iss >> size;
 
         // Throws an exception if the entered matrix size exceeds the allowed maximum (5)
         if (size > MAX_MAT_SIZE)
@@ -63,16 +92,7 @@ void FunctionCalculator::eval()
             throw InputException("The entered matrix size is larger than MAX_MAT_SIZE (5)");
         }
 
-        
-        // Throws an exception if too many arguments were provided for the command
-      /*  auto str = std::string();
-        m_istr >> str;
-        if ( str != "")
-        {
-            throw InputException("Too many arguments for this command");
-        }*/
-
-        if (hasNonWhitespace())
+        if (hasNonWhitespace(iss))
             throw InputException("Too many arguments for this command");
 
 
@@ -84,10 +104,10 @@ void FunctionCalculator::eval()
 		{
             auto input = Operation::T(size); // Operation::T == SquareMatrix<int>
             m_ostr << "\nEnter a " << size << "x" << size << " matrix:\n";
-            m_istr >> input;
+            istr >> input;
 			matrixVec.push_back(input);
-
 		}
+
         m_ostr << "\n";
         operation->print(m_ostr, matrixVec);
         m_ostr << " = \n" << operation->compute(matrixVec);
@@ -95,10 +115,10 @@ void FunctionCalculator::eval()
 }
 
 
-void FunctionCalculator::del()
+void FunctionCalculator::del(std::istringstream& iss)
 {
 	// update the number of operations are leagelly -- ??? 
-    if (auto i = readOperationIndex(); i)
+    if (auto i = readOperationIndex(iss); i)
     {
         m_operations.erase(m_operations.begin() + *i);
     }
@@ -122,46 +142,41 @@ void FunctionCalculator::exit()
     m_running = false;
 }
 
-void FunctionCalculator::read()
+void FunctionCalculator::read(std::istringstream& iss)
 {
-    std::string file_path = "new1.txt";
-    ReadFile file1(file_path);
-
-    std::string line;
-    while (file1.getline(line))
-    {
-		// read the line from the file and send the string to readAction function.
-		// readAction();
-
-
+    auto file_path = std::string();
+    iss >> file_path;
+    std::ifstream file(file_path);
+    if (!file){
+		throw FileException("File not found. \n path: " + file_path); // WARNING NOT CATCHING!!!
     }
+    run(file);
 }
 
 void FunctionCalculator::printOperations() const
 {
 	// print number of operations are leagelly
-    m_ostr << "List of available matrix operations:\n";
+
+    m_ostr << " \n List of available matrix operations:\n";
     for (decltype(m_operations.size()) i = 0; i < m_operations.size(); ++i)
     {
         m_ostr << i << ". ";
         m_operations[i]->print(m_ostr,true);
         m_ostr << '\n';
     }
-    m_ostr << '\n';
+    m_ostr << "\n Enter command ('help' for the list of available commands): ";
 }
 
-
-std::optional<int> FunctionCalculator::readOperationIndex() 
+std::optional<int> FunctionCalculator::readOperationIndex(std::istringstream& iss)
 {
     int i = 0;
-    //m_istr >> i;
-    m_iss >> i;
+    iss >> i;
 
     // if the read operation failed (e.g. characters were entered instead of a number)
-    if (m_iss.fail())
+    if (iss.fail())
     {
-        m_iss.clear();
-        m_iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        iss.clear();
+        iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         throw InputException("must enter numbers, not characters.");
     }
 
@@ -174,25 +189,10 @@ std::optional<int> FunctionCalculator::readOperationIndex()
     return i;
 }
 
-
-FunctionCalculator::Action FunctionCalculator::readAction() 
+FunctionCalculator::Action FunctionCalculator::readAction(std::istringstream& iss)
 {
-
-    /*The code should be modified as follows:
-The user will input data into m_istr.
-This input will be inserted into std::istringstream m_iss.
-The readAction function should then read the command from the istringstream.
-
-We will also support reading from a file:
-The string received from the function ReadFile::getline(std::string& outLine) will be inserted into the istringstream, and from there, the code will call the readAction function.
-
--- The readAction function will likely no longer be const.*/
-    //auto line = std::string();
-    //std::getline(m_istr, line);
-    
     auto action = std::string();
-    //m_istr >> action;
-    m_iss >> action;
+    iss >> action;
 
     const auto i = std::ranges::find(m_actions, action, &ActionDetails::command);
 
@@ -201,13 +201,11 @@ The string received from the function ReadFile::getline(std::string& outLine) wi
 	{
 		throw InputException("number outside the range of the operation vector\n");
 	}
-    
    
     return i->action;
 }
 
-
-void FunctionCalculator::runAction(Action action)
+void FunctionCalculator::runAction(Action action , std::istringstream& iss , std::istream& istr)
 {
     switch (action)
     {
@@ -219,21 +217,20 @@ void FunctionCalculator::runAction(Action action)
             m_ostr << "Command not found\n";
             break;
 
-        case Action::Eval:     eval();                      break;
-        case Action::Add:      binaryFunc<Add>();           break;
-        case Action::Sub:      binaryFunc<Sub>();           break;
-        case Action::Comp:     binaryFunc<Comp>();          break;
-        case Action::Del:      del();                       break;
-        case Action::Help:     help();                      break;
-        case Action::Exit:     exit();                      break;
-        case Action::Iden:     unaryFunc<Identity>();       break;
-        case Action::Tran:     unaryFunc<Transpose>();      break;
-        case Action::Scal:     unaryWithIntFunc<Scalar>();  break;
-        case Action::Read:     read();                      break;
+        case Action::Eval:     eval(iss, istr);               break;
+        case Action::Add:      binaryFunc<Add>(iss);          break;
+        case Action::Sub:      binaryFunc<Sub>(iss);          break;
+        case Action::Comp:     binaryFunc<Comp>(iss);         break;
+        case Action::Del:      del(iss);                      break;
+        case Action::Help:     help();                        break;
+        case Action::Exit:     exit();                        break;
+        case Action::Iden:     unaryFunc<Identity>();         break;
+        case Action::Tran:     unaryFunc<Transpose>();        break;
+        case Action::Scal:     unaryWithIntFunc<Scalar>(iss); break;
+        case Action::Read:     read(iss);                        break;
             // reaize
     }
 }
-
 
 FunctionCalculator::ActionMap FunctionCalculator::createActions() const
 {
@@ -283,10 +280,14 @@ FunctionCalculator::ActionMap FunctionCalculator::createActions() const
             "exit",
             " - exit the program",
             Action::Exit
+        },
+        {
+            "read",
+            " the file , enter path the file",
+            Action::Read
         }
     };
 }
-
 
 FunctionCalculator::OperationList FunctionCalculator::createOperations() const
 {
@@ -297,21 +298,65 @@ FunctionCalculator::OperationList FunctionCalculator::createOperations() const
     };
 }
 
-void FunctionCalculator::readLine()
+ // void FunctionCalculator::readLine(std::istream& istr)
+//{
+//    if (m_fileMode && !file.eof())
+//    {
+//        std::getline(file, m_line);
+//    }
+//	else if (m_fileMode && file.eof())
+//	{
+//		file.close();
+//		m_fileMode = false;
+//        std::getline(m_istr, m_line);
+//	}
+//	else
+//	{
+//		std::getline(m_istr, m_line);
+//	}
+//
+//    m_iss.clear();
+//    m_iss.str(m_line);
+//}
+
+bool FunctionCalculator::hasNonWhitespace(std::istringstream& iss)
 {
-	//if mode read from file -> getline(file , line) // if EOF change mode to console // close file
-	//else getline(std::cin, line);
-    std::getline(m_istr, m_line);
-    m_iss.str(m_line);
+    return (!(iss.eof() || (iss >> std::ws).eof()));
 }
 
-bool FunctionCalculator::hasNonWhitespace()
+void FunctionCalculator::updateMaxFunc()
 {
-    char ch;
-    while (m_iss >> std::noskipws >> ch) {
-        if (!std::isspace(static_cast<unsigned char>(ch))) {
-            return true;
+    do {
+        try {
+            m_ostr << "Enter the number of operations to be performed (between 2 and 100): ";
+            std::cin >> m_maxOperation;
+
+            // if the read operation failed (e.g. characters were entered instead of a number)
+            if (std::cin.fail()) {
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                throw InputException("Invalid input. Please enter a number.");
+            }
+
+            if (m_maxOperation < 2 || m_maxOperation > 100) {
+                throw InputException("The number of operations must be between 2 and 100.");
+            }
+
+            break;
         }
+        catch (const InputException& e) {
+            m_ostr << "Error: " << e.what() << "\n";
+        }
+    } while (true);
+
+}
+
+void  FunctionCalculator::addOperation(std::shared_ptr<Operation> op)
+{
+    if (m_operations.size() > m_maxOperation)
+    {
+        throw InputException("Cannot add more operations: maximum limit of " + std::to_string(m_maxOperation));
     }
-    return false;
+
+    m_operations.push_back(std::move(op));
 }

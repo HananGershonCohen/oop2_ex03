@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-
+#include <fstream>
 
 class Operation;
 
@@ -16,43 +16,42 @@ class Operation;
 class FunctionCalculator
 {
 public:
-    FunctionCalculator(std::istream& istr, std::ostream& ostr);
+    FunctionCalculator(std::ostream& ostr);
     void run();
+    void run(std::istream& istr);
 
 private:
-    void eval();
-    void del();
+    void eval(std::istringstream&, std::istream&);
+    void del(std::istringstream&);
     void help();
     void exit();
-    void read();
-
-
-	// function check if the number of vecoperations is correct #1
+    void read(std::istringstream&);
 
     template <typename FuncType>
-    void binaryFunc()
+    void binaryFunc(std::istringstream& iss)
     {
-		// call to #1
-        if (auto f0 = readOperationIndex(), f1 = readOperationIndex(); f0 && f1)
+        if (auto f0 = readOperationIndex(iss), f1 = readOperationIndex(iss); f0 && f1)
         {
-            m_operations.push_back(std::make_shared<FuncType>(m_operations[*f0], m_operations[*f1]));
+            addOperation(std::make_shared<FuncType>(m_operations[*f0], m_operations[*f1]));
         }
     }
 
     template <typename FuncType>
     void unaryFunc()
     {
-		//callto #1
-    	m_operations.push_back(std::make_shared<FuncType>());
-	}
+        addOperation(std::make_shared<FuncType>());
+    }
 
     template <typename FuncType>
-    void unaryWithIntFunc()
+    void unaryWithIntFunc(std::istringstream& iss)
     {
-		// call to #1
         int i = 0;
-        m_istr >> i;
-        m_operations.push_back(std::make_shared<FuncType>(i));
+        iss >> i;
+        if (iss.fail())
+        {
+            throw std::runtime_error("Invalid input: expected an integer.");
+        }
+        addOperation(std::make_shared<FuncType>(i));
     }
 
     void printOperations() const;
@@ -88,22 +87,25 @@ private:
     const ActionMap m_actions;
     OperationList m_operations;
     bool m_running = true;
-    std::istream& m_istr;
+    //std::istream& m_istr;
     std::ostream& m_ostr;
-
-    std::istringstream m_iss;
+	int m_maxOperation = 0; // number of operations are leagelly
+    //std::istringstream m_iss;
     std::string m_line;
-    
+	// Can be wrapped inside a class. ReadFile Class
 
-    std::optional<int> readOperationIndex() ;
-    Action readAction();
+	
+
+
+    std::optional<int> readOperationIndex(std::istringstream&) ;
+    Action readAction(std::istringstream& iss);
     
-    void runAction(Action action);
+    void runAction(Action action , std::istringstream&, std::istream&);
 
     ActionMap createActions() const;
     OperationList createOperations() const ;
 
-    // 
-    void readLine();
-    bool hasNonWhitespace();
+    bool hasNonWhitespace(std::istringstream&);
+    void updateMaxFunc();
+    void addOperation(std::shared_ptr<Operation>);
 };
