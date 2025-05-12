@@ -15,11 +15,9 @@
 
 
 
-const auto MAX_MAT_SIZE = 5;
 
 FunctionCalculator::FunctionCalculator( std::ostream& ostr)
     : m_actions(createActions()), m_operations(createOperations()), m_ostr(ostr) {}
-
 
 void FunctionCalculator::run()
 {
@@ -29,18 +27,12 @@ void FunctionCalculator::run()
 
 void FunctionCalculator::run(std::istream& istr)
 {
-    //evistr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    // Read as much as possible either from the file or from standard input.
     auto line = std::string();
     auto iss = std::istringstream();
-    //iss.exceptions(std::ios::failbit | std::ios::badbit);
-  //  iss.clear();
-    
  
     printOperations();
     while (m_running && std::getline(istr, line))
     {
-      //  iss.clear();
         iss.str(line);
 
         try {
@@ -84,10 +76,8 @@ void FunctionCalculator::run(std::istream& istr)
             istr.clear();
             istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
-        //iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } 
 }
-
 
 void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
 {
@@ -97,12 +87,6 @@ void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
 		int inputCount = operation->inputCount();
         int size = 0;
         iss >> size;
-
-        // Throws an exception if the entered matrix size exceeds the allowed maximum (5)
-        if (size > MAX_MAT_SIZE)
-        {
-            throw InputException("The entered matrix size is larger than MAX_MAT_SIZE (5)");
-        }
 
         if (hasNonWhitespace(iss))
             throw InputException("Too many arguments for this command");
@@ -127,7 +111,6 @@ void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
     }
 }
 
-
 void FunctionCalculator::del(std::istringstream& iss)
 {
 	// update the number of operations are leagelly -- ??? 
@@ -136,7 +119,6 @@ void FunctionCalculator::del(std::istringstream& iss)
         m_operations.erase(m_operations.begin() + *i);
     }
 }
-
 
 void FunctionCalculator::help()
 {
@@ -147,7 +129,6 @@ void FunctionCalculator::help()
     }
     m_ostr << '\n';
 }
-
 
 void FunctionCalculator::exit()
 {
@@ -164,21 +145,11 @@ void FunctionCalculator::read(std::istringstream& iss)
     if (!file.is_open()){
 		throw FileException("File not found. \n path: " + file_path); // WARNING NOT CATCHING!!!
     }
-   
     run(file);
-    
-
-
 }
 
 void FunctionCalculator::resize(std::istream& istr)
 {
-    /*(
-In which the user can change the function limit, resize 10 . Another command that will be added to the list of commands is
-at will. The same checks from the previous section are also required here. In addition, if the user reduces the number of possible functions
-from the number of existing functions in the case that functions were added by the user - this is not an error ()
-and therefore we will not require the use of an exception, and he will receive an appropriate message that will offer him to cancel the operation or delete the functions at the end of the list up to the allowed limit*/
-
     m_ostr << "Enter the new maximum number of operations (between 2 and 100): \n";
 	auto newMaxOperation = 0;
 	istr >> newMaxOperation;
@@ -357,27 +328,6 @@ FunctionCalculator::OperationList FunctionCalculator::createOperations() const
         std::make_shared<Transpose>(),
     };
 }
-
- // void FunctionCalculator::readLine(std::istream& istr)
-//{
-//    if (m_fileMode && !file.eof())
-//    {
-//        std::getline(file, m_line);
-//    }
-//	else if (m_fileMode && file.eof())
-//	{
-//		file.close();
-//		m_fileMode = false;
-//        std::getline(m_istr, m_line);
-//	}
-//	else
-//	{
-//		std::getline(m_istr, m_line);
-//	}
-//
-//    m_iss.clear();
-//    m_iss.str(m_line);
-//}
 
 bool FunctionCalculator::hasNonWhitespace(std::istringstream& iss)
 {
