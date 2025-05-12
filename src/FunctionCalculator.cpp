@@ -29,15 +29,18 @@ void FunctionCalculator::run()
 
 void FunctionCalculator::run(std::istream& istr)
 {
+    //evistr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     // Read as much as possible either from the file or from standard input.
     auto line = std::string();
     auto iss = std::istringstream();
-    iss.exceptions(std::ios::failbit | std::ios::badbit);
+    //iss.exceptions(std::ios::failbit | std::ios::badbit);
+  //  iss.clear();
+    
+ 
+    printOperations();
     while (m_running && std::getline(istr, line))
     {
-        printOperations();
-        std::getline(istr, line);
-        iss.clear();
+      //  iss.clear();
         iss.str(line);
 
         try {
@@ -63,7 +66,7 @@ void FunctionCalculator::run(std::istream& istr)
             //{
             //    m_ostr << "Error: " << e.what() << "\n";
             //}
-             m_ostr << e.what();
+             m_ostr << e.what();            
         }
         catch (const FileException& e)
         {
@@ -73,6 +76,15 @@ void FunctionCalculator::run(std::istream& istr)
         {
             m_ostr << "Error: " << e.what() << '\n';
         }
+
+        printOperations();
+        iss.clear();
+        
+        if (istr.fail()) {
+            istr.clear();
+            istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+        //iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } 
 }
 
@@ -95,7 +107,6 @@ void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
         if (hasNonWhitespace(iss))
             throw InputException("Too many arguments for this command");
 
-
 		auto matrixVec = std::vector<Operation::T>();
         if (inputCount > 1)
             m_ostr << "\nPlease enter " << inputCount << " matrices:\n";
@@ -107,6 +118,8 @@ void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
             istr >> input;
 			matrixVec.push_back(input);
 		}
+        istr.clear();
+        istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
         m_ostr << "\n";
         operation->print(m_ostr, matrixVec);
@@ -145,12 +158,54 @@ void FunctionCalculator::exit()
 void FunctionCalculator::read(std::istringstream& iss)
 {
     auto file_path = std::string();
+	auto file = std::ifstream();
     iss >> file_path;
-    std::ifstream file(file_path);
-    if (!file){
+	file.open(file_path);
+    if (!file.is_open()){
 		throw FileException("File not found. \n path: " + file_path); // WARNING NOT CATCHING!!!
     }
+   
     run(file);
+    
+
+
+}
+
+void FunctionCalculator::resize(std::istream& istr)
+{
+    /*(
+In which the user can change the function limit, resize 10 . Another command that will be added to the list of commands is
+at will. The same checks from the previous section are also required here. In addition, if the user reduces the number of possible functions
+from the number of existing functions in the case that functions were added by the user - this is not an error ()
+and therefore we will not require the use of an exception, and he will receive an appropriate message that will offer him to cancel the operation or delete the functions at the end of the list up to the allowed limit*/
+
+    m_ostr << "Enter the new maximum number of operations (between 2 and 100): \n";
+	auto newMaxOperation = 0;
+	istr >> newMaxOperation;
+	if (istr.fail())
+	{
+		istr.clear();
+		istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		throw InputException("Invalid input. Please enter a number.");
+	}
+	if (newMaxOperation < 2 || newMaxOperation > 100)
+	{
+		throw InputException("The number of operations must be between 2 and 100.");
+	}
+	if (newMaxOperation < static_cast<int>(m_operations.size()))
+	{
+		m_ostr << "The new maximum number of operations is less than the current number of operations.\n";
+		m_ostr << "Do you want to delete the excess operations? (y/n): ";
+		char choice;
+		std::cin >> choice;
+		if (choice == 'y' || choice == 'Y')
+		{
+			m_operations.resize(newMaxOperation);
+			m_ostr << "Excess operations deleted.\n";
+		}
+	}
+    istr.clear();
+    istr.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 void FunctionCalculator::printOperations() const
@@ -199,7 +254,7 @@ FunctionCalculator::Action FunctionCalculator::readAction(std::istringstream& is
    // If a number was entered outside the range of the operation vector
     if (i == m_actions.end())
 	{
-		throw InputException("number outside the range of the operation vector\n");
+        return Action::Invalid;
 	}
    
     return i->action;
@@ -214,21 +269,21 @@ void FunctionCalculator::runAction(Action action , std::istringstream& iss , std
             break;
 
         case Action::Invalid:
-            m_ostr << "Command not found\n";
+            throw InputException("Command not found\n");
             break;
 
-        case Action::Eval:     eval(iss, istr);               break;
-        case Action::Add:      binaryFunc<Add>(iss);          break;
-        case Action::Sub:      binaryFunc<Sub>(iss);          break;
-        case Action::Comp:     binaryFunc<Comp>(iss);         break;
-        case Action::Del:      del(iss);                      break;
-        case Action::Help:     help();                        break;
-        case Action::Exit:     exit();                        break;
-        case Action::Iden:     unaryFunc<Identity>();         break;
-        case Action::Tran:     unaryFunc<Transpose>();        break;
-        case Action::Scal:     unaryWithIntFunc<Scalar>(iss); break;
-        case Action::Read:     read(iss);                        break;
-            // reaize
+        case Action::Eval:     eval(iss, istr);                 break;
+        case Action::Add:      binaryFunc<Add>(iss);            break;
+        case Action::Sub:      binaryFunc<Sub>(iss);            break;
+        case Action::Comp:     binaryFunc<Comp>(iss);           break;
+        case Action::Del:      del(iss);                        break;
+        case Action::Help:     help();                          break;
+        case Action::Exit:     exit();                          break;
+        case Action::Iden:     unaryFunc<Identity>();           break;
+        case Action::Tran:     unaryFunc<Transpose>();          break;
+        case Action::Scal:     unaryWithIntFunc<Scalar>(iss);   break;
+        case Action::Read:     read(iss);                       break;
+        case Action::Resize:   resize(istr);                    break;
     }
 }
 
@@ -285,6 +340,11 @@ FunctionCalculator::ActionMap FunctionCalculator::createActions() const
             "read",
             " the file , enter path the file",
             Action::Read
+        },
+    	{
+			"resize",
+            " num - change the maximum number of operations",
+            Action::Resize
         }
     };
 }
@@ -348,7 +408,8 @@ void FunctionCalculator::updateMaxFunc()
             m_ostr << "Error: " << e.what() << "\n";
         }
     } while (true);
-
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 void  FunctionCalculator::addOperation(std::shared_ptr<Operation> op)

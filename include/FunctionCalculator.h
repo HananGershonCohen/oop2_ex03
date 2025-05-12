@@ -26,6 +26,7 @@ private:
     void help();
     void exit();
     void read(std::istringstream&);
+    void resize(std::istream&);
 
     template <typename FuncType>
     void binaryFunc(std::istringstream& iss)
@@ -70,7 +71,8 @@ private:
         Del,
         Help,
         Exit,
-        Read
+        Read,
+        Resize
     };
 
     // Command line
@@ -89,7 +91,7 @@ private:
     bool m_running = true;
     //std::istream& m_istr;
     std::ostream& m_ostr;
-	int m_maxOperation = 0; // number of operations are leagelly
+	int m_maxOperation = 3; // number of operations are leagelly
     //std::istringstream m_iss;
     std::string m_line;
 	// Can be wrapped inside a class. ReadFile Class
