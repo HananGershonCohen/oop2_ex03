@@ -9,12 +9,8 @@
 #include "InputException.h"
 #include "FileException.h"
 //#include "ReadFile.h"
-
 #include <iostream>
 #include <algorithm>
-
-
-
 
 FunctionCalculator::FunctionCalculator( std::ostream& ostr)
     : m_actions(createActions()), m_operations(createOperations()), m_ostr(ostr) {}
@@ -22,14 +18,15 @@ FunctionCalculator::FunctionCalculator( std::ostream& ostr)
 void FunctionCalculator::run()
 {
 	updateMaxFunc();
-    run(std::cin);
+    run(std::cin, false);
 }
 
-void FunctionCalculator::run(std::istream& istr)
+void FunctionCalculator::run(std::istream& istr, bool fileMode)
 {
     auto line = std::string();
     auto iss = std::istringstream();
- 
+ //   iss.exceptions(std::ios::failbit | std::ios::badbit);
+
     printOperations();
     while (m_running && std::getline(istr, line))
     {
@@ -40,26 +37,26 @@ void FunctionCalculator::run(std::istream& istr)
             runAction(action, iss , istr);
         }
         catch (const InputException& e)
-        {
-            //if (m_fileMode)
-            //{
-            //    m_ostr << "\n this line is invalid: " << m_line << "\n";
-            //    m_ostr << "Error: " << e.what() << "\n";
-            //    m_ostr << "Do you want to continue? (y/n): ";
-            //    char choice;
-            //    std::cin >> choice;
-            //    if (choice == 'n' || choice == 'N')
-            //    {
-            //        //	file.close();
-            //        m_fileMode = false;
-            //    }
-            //}
-            //else
-            //{
-            //    m_ostr << "Error: " << e.what() << "\n";
-            //}
-             m_ostr << e.what();            
+        {        
+			if (!fileMode) // if not in file mode
+			{
+				m_ostr << "Error: " << e.what() << "\n";
+			}
+			else
+			{
+				m_ostr << "this line is invalid: " << line << "\n";
+				m_ostr << "Error: " << e.what() << "\n";
+				m_ostr << "Do you want to continue reading the file? (y/n): ";
+				char choice;
+				std::cin >> choice;
+				if (choice == 'n' || choice == 'N')
+				{
+					m_running = false;
+				}
+			}
+        //    m_ostr << "Error: " << e.what() << "\n";
         }
+
         catch (const FileException& e)
         {
            m_ostr << e.what();
@@ -87,6 +84,12 @@ void FunctionCalculator::eval(std::istringstream& iss, std::istream& istr)
 		int inputCount = operation->inputCount();
         int size = 0;
         iss >> size;
+		if (iss.fail())
+		{
+			iss.clear();
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			throw InputException("Missing arguments for this command, there is no 'SIZE' argument for this command.");
+		}
 
         if (hasNonWhitespace(iss))
             throw InputException("Too many arguments for this command");
@@ -145,7 +148,7 @@ void FunctionCalculator::read(std::istringstream& iss)
     if (!file.is_open()){
 		throw FileException("File not found. \n path: " + file_path); // WARNING NOT CATCHING!!!
     }
-    run(file);
+    run(file, true);
 }
 
 void FunctionCalculator::resize(std::istream& istr)

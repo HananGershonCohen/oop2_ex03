@@ -2,8 +2,10 @@
 
 #include <vector>
 #include <iostream>
-
-// c-tor initializes defualt values of the matrix . clear this.
+#include"FileException.h"
+const int MAX_ALLOWED_VALUE = 1024;
+const int MIN_ALLOWED_VALU = -1024;
+const int MAX_MAT_SIZE = 5;
 
 template <typename T>
 class SquareMatrix
@@ -17,7 +19,7 @@ public:
 	//SquareMatrix(const std::vector<std::vector<T>>& matrix);
 	//SquareMatrix(std::vector<std::vector<T>>&& matrix);
 	SquareMatrix(int size, const T& value);
-	SquareMatrix(int size);
+	SquareMatrix(int size);// i don't know why he did this strange c-tor !!!!!    
 	int size() const
 	{
 		return m_size;
@@ -36,6 +38,10 @@ public:
 	//bool operator!=(const SquareMatrix& rhs) const;
 	SquareMatrix Transpose() const;
 	//void print(std::ostream& ostr) const;
+
+	void checkVal(T) const;
+	void checkSize(int) const;
+
 private:
 	int m_size;
 	std::vector<std::vector<T>> m_matrix;
@@ -72,7 +78,11 @@ inline std::istream& operator>>(std::istream& istr, SquareMatrix<int>& matrix)
 	{
 		for (int j = 0; j < matrix.size(); ++j)
 		{
-			istr >> matrix(i, j);
+			int val;
+			istr >> val;
+
+			matrix.checkVal(val);
+			matrix(i, j) = val;
 		}
 	}
 	return istr;
@@ -82,64 +92,74 @@ inline std::istream& operator>>(std::istream& istr, SquareMatrix<int>& matrix)
 // the relevant function
 template <typename T>
 SquareMatrix<T>::SquareMatrix(int size, const T& value)
-	: m_size(size), m_matrix(size, std::vector<T>(size, value)) // to add function check -1024 +1000
-	// MAX_SIZE_MATRIX > 5 , before using the vector
 {
-	for (int i = 0; i < size * size; ++i)
-	{
-		m_matrix[i / size][i % size] = value;
-	}
+	checkSize(size);
+	checkVal(value);
+
+	m_size = size;
+	m_matrix = std::vector<std::vector<T>>(size, std::vector<T>(size, value));
 }
 
 template <typename T>
 SquareMatrix<T>::SquareMatrix(int size)
-	: m_size(size), m_matrix(size, std::vector<T>(size))
+
 {
+	checkSize(size);
+	m_size = size;
+	m_matrix = std::vector<std::vector<T>>(size, std::vector<T>(size));
+
 	for (int i = 0; i < size * size; ++i)
 	{
-		m_matrix[i / size][i % size] = i;
+		m_matrix[i / size][i % size] = static_cast<T>(i);
 	}
 }
 
 template <typename T>
 SquareMatrix<T> SquareMatrix<T>::operator+(const SquareMatrix& rhs) const
 {
-	SquareMatrix result(*this);
-	return result += rhs;
+	SquareMatrix result(m_size); // ????? ?????? ????? ????
+
+	for (int i = 0; i < m_size; ++i)
+	{
+		for (int j = 0; j < m_size; ++j)
+		{
+			T sum = m_matrix[i][j] + rhs.m_matrix[i][j];
+			checkVal(sum);
+			result(i, j) = sum;
+		}
+	}
+	return result;
 }
 
 
 template <typename T>
 SquareMatrix<T> SquareMatrix<T>::operator-(const SquareMatrix& rhs) const
 {
-	SquareMatrix result(*this);
-	return result -= rhs;
+	SquareMatrix result(m_size); // ????? ?????? ????? ????
+
+	for (int i = 0; i < m_size; ++i)
+	{
+		for (int j = 0; j < m_size; ++j)
+		{
+			T sum = m_matrix[i][j] - rhs.m_matrix[i][j];
+			checkVal(sum);
+			result(i, j) = sum;
+		}
+	}
+	return result;
 }
 
 template <typename T>
 SquareMatrix<T>& SquareMatrix<T>::operator+=(const SquareMatrix& rhs)
 {
-	for (int i = 0; i < m_size; ++i)
-	{
-		for (int j = 0; j < m_size; ++j)
-		{
-			m_matrix[i][j] += rhs.m_matrix[i][j];
-		}
-	}
-	return *this;
+	return *this = *this + rhs;
 }
 
 template <typename T>
 SquareMatrix<T>& SquareMatrix<T>::operator-=(const SquareMatrix& rhs)
 {
-	for (int i = 0; i < m_size; ++i)
-	{
-		for (int j = 0; j < m_size; ++j)
-		{
-			m_matrix[i][j] -= rhs.m_matrix[i][j];
-		}
-	}
-	return *this;
+
+	return *this = *this - rhs;
 }
 
 template <typename T>
@@ -155,6 +175,8 @@ SquareMatrix<T> SquareMatrix<T>::Transpose() const
 	}
 	return result;
 }
+
+
 template <typename T>
 SquareMatrix<T> SquareMatrix<T>::operator*(const T& scalar) const
 {
@@ -163,8 +185,22 @@ SquareMatrix<T> SquareMatrix<T>::operator*(const T& scalar) const
 	{
 		for (int j = 0; j < m_size; ++j)
 		{
-			result(i, j) *= scalar;
+			T sum = m_matrix[i][j] * scalar;
+			checkVal(sum);
+			result(i, j) = sum;
 		}
 	}
 	return result;
+}
+
+template<typename T>
+inline void SquareMatrix<T>::checkVal(T val) const {
+	if (val <= MIN_ALLOWED_VALU || val >= MAX_ALLOWED_VALUE)
+		throw FileException("the value: " + std::to_string(val) + " ,is invalid value");
+}
+
+template<typename T>
+inline void SquareMatrix<T>::checkSize(int size) const {
+	if (size <= 0 || size >= MAX_MAT_SIZE)
+		throw FileException("the size: " + std::to_string(size) + " ,is invalid size for SquareMatrix");
 }

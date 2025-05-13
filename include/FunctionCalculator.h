@@ -18,7 +18,7 @@ class FunctionCalculator
 public:
     FunctionCalculator(std::ostream& ostr);
     void run();
-    void run(std::istream& istr);
+    void run(std::istream& istr, bool fileMode);
 
 private:
     void eval(std::istringstream&, std::istream&);
